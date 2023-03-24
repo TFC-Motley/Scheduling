@@ -16,7 +16,7 @@ module {
   public type Increments = Nat.Map<Principal.Set>;
   public type Registry = Principal.Map<Schedule>;
 
-  private type CyclesReport = {
+  public type CyclesReport = {
     balance : Nat;
     transfer : shared () -> async ();
   };
