@@ -21,6 +21,15 @@ module {
     transfer : shared () -> async ();
   };
 
+  public type ChainReport = {
+    #report : CyclesReport;
+    #ping;
+  };
+
+  public type ChildService = actor {
+    chain_report : shared (ChainReport) -> ();
+  };
+
   public type HeartbeatService = actor {
     schedule : shared ([ScheduledTask]) -> async ();
     report_balance : shared (CyclesReport) -> ();
