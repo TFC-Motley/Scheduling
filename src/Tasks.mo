@@ -1,7 +1,11 @@
 import Hash "mo:base/Hash";
 import Trie "mo:base/Trie";
+import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Nat "mo:base-ext/Nat";
+import Buffer "mo:base/Buffer";
+import Option "mo:base/Option";
+import Principal "mo:base-ext/Principal";
 
 
 module {
@@ -10,7 +14,7 @@ module {
   public type Task = shared() -> ();
   public type Schedule = Nat.Map<[Task]>;
   public type Increments = Nat.Map<Principal.Set>;
-  public type Regsitry = Principal.Map<Schedule>;
+  public type Registry = Principal.Map<Schedule>;
 
   private type CyclesReport = {
     balance : Nat;
@@ -56,13 +60,13 @@ module {
     
   };
 
-  public module Interval = {
+  // public module Interval = {
     
-    public func hash( x : Interval ) : Hash.Hash {Nat.Base.hash(x)};
-    public func equal( x : Interval, y : Interval ) : Bool {Nat.Base.equal(x,y)};
-    public func rem( x : Interval, y : Interval ) : Int {Nat.Base.rem(x, y)};
+  //   public func hash( x : Interval ) : Hash.Hash {Int.hash(x)};
+  //   public func equal( x : Interval, y : Interval ) : Bool {Nat.Base.equal(x,y)};
+  //   public func rem( x : Interval, y : Interval ) : Int {Nat.Base.rem(x, y)};
 
-  };
+  // };
 
   public module Schedule = {
     
@@ -70,12 +74,12 @@ module {
 
     public func entries( map : Schedule ) : Iter.Iter<(Interval,[Task])> { Nat.Map.entries(map) };
 
-    public func intervals( map : Schedule ) : Iter.Iter<Interval> { Nat.Map.keys<Task>(map) };
+    public func intervals( map : Schedule ) : Iter.Iter<Interval> { Nat.Map.keys<[Task]>( map ) };
   
     public func schedule_task(map : Schedule, sched : ScheduledTask ) : () {
-      let tasks = Buffer.fromArray<Task>( Option.get(Nat.Map.find(map sched.interval), []) );
+      let tasks = Buffer.fromArray<Task>( Option.get(Nat.Map.get(map, sched.interval), []) );
       tasks.append( Buffer.fromArray( sched.tasks ) );
-      Nat.Map.set(map, sched.interval, Buffer.toArray( current ) );
+      Nat.Map.set(map, sched.interval, Buffer.toArray( tasks ) );
     };
 
     public func tasks_by_interval( map : Schedule, x : Interval ) : Iter.Iter<Task> {
@@ -90,12 +94,12 @@ module {
 
     public func put(map : Registry, svc : Principal, sched : Schedule ) : () { Principal.Map.set<Schedule>(map, svc, sched) };
 
-    public func get(map : Registry, svc : Principal ) : ?Schedule { Principa.Map.get<Schedule>(map, svc) };
+    public func get(map : Registry, svc : Principal ) : ?Schedule { Principal.Map.get<Schedule>(map, svc) };
 
     public func delete(map : Registry, svc : Principal ) : () { Principal.Map.delete<Schedule>(map, svc) };
 
     public func tasks_by_svc_interval(map : Registry, svc : Principal, interval : Interval ) : Iter.Iter<Task> {
-      switch( Nat.Map.get<Schedule>(map, ) ){
+      switch( Principal.Map.get<Schedule>(map, svc) ){
         case ( ?sched ) Schedule.tasks_by_interval(sched, interval);
         case null object { public func next() : ?Task { null } }
       }
@@ -107,14 +111,15 @@ module {
 
     public func init() : Increments { Nat.Map.init<Principal.Set>() };
 
-    public func entries( inc : Increments ) : Iter.Iter<(Interval, Principal.Set)> { Nat.Map.entries( map ) };
+    public func entries( inc : Increments ) : Iter.Iter<(Interval, Principal.Set)> { Nat.Map.entries( inc ) };
 
     public func interval( inc : Increments ) : Iter.Iter<Interval> { Nat.Map.keys( inc ) };
 
     public func add(inc : Increments, interval : Interval, svc : Principal ) : () {
       let actors = Buffer.fromArray<Principal>(
         Principal.Set.toArray( Option.get( Nat.Map.get(inc, interval), Principal.Set.init() ) ) );
-      Nat.Map.set(map, interval, Principal.Set.fromArray( Buffer.toArray( actors.add( svc ) ) ) );
+      actors.add( svc );
+      Nat.Map.set(inc, interval, Principal.Set.fromArray( Buffer.toArray<Principal>( actors ) ) );
     };
 
     public func services_by_interval(inc : Increments, interval : Interval ) : Iter.Iter<Principal> {
